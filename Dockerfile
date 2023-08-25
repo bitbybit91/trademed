@@ -5,7 +5,7 @@
 # It is not efficient to use rails:onbuild image because every change to the app's source code will mean
 # every step in this Dockerfile needs to run again. This is because the ONBUILD commands are run
 # before anything in the Dockerfile.
-FROM ruby:2.5
+FROM ruby:2.7.6
 
 # throw errors if Gemfile has been modified since Gemfile.lock
 RUN bundle config --global frozen 1
