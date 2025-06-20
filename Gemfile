@@ -48,7 +48,7 @@ group :development, :test do
   gem 'spring'
 
   gem 'rspec-rails'
-  gem "factory_bot_rails"
+  gem "factory_bot_rails", ">= 6.5.0"
   gem "capybara"
   gem "guard-rspec"
   gem 'shoulda-matchers'
