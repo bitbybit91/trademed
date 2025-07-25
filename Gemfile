@@ -1,12 +1,12 @@
 source 'https://rubygems.org'
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'
-gem 'rails', '5.2.2'
+gem 'rails', '5.2.2.1'
 # Use postgresql as the database for Active Record
 gem 'pg'
 gem 'bootstrap-sass', '~> 3.3.3'
 # Use SCSS for stylesheets
-gem 'sass-rails', '~> 5.0'
+gem 'sass-rails', '~> 5.0', '>= 5.0.8'
 # Use Uglifier as compressor for JavaScript assets
 gem 'uglifier', '>= 1.3.0'
 # See https://github.com/sstephenson/execjs#readme for more supported runtimes
@@ -38,7 +38,7 @@ gem 'humanizer'
 gem "paperclip", "~> 5.3"
 
 gem 'socksify'
-gem 'kaminari'
+gem 'kaminari', '>= 1.2.0'
 
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
@@ -47,11 +47,11 @@ group :development, :test do
   # Spring speeds up development by keeping your application running in the background. Read more: https://github.com/rails/spring
   gem 'spring'
 
-  gem 'rspec-rails'
-  gem "factory_bot_rails"
-  gem "capybara"
+  gem 'rspec-rails', '>= 3.8.2'
+  gem "factory_bot_rails", ">= 5.0.0"
+  gem "capybara", ">= 3.13.0"
   gem "guard-rspec"
   gem 'shoulda-matchers'
-  gem 'rails-controller-testing'
+  gem 'rails-controller-testing', '>= 1.0.5'
 end
 
