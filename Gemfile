@@ -1,7 +1,7 @@
 source 'https://rubygems.org'
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'
-gem 'rails', '5.2.2'
+gem 'rails', '7.1.5.2'
 # Use postgresql as the database for Active Record
 gem 'pg'
 gem 'bootstrap-sass', '~> 3.3.3'
@@ -32,13 +32,13 @@ gem 'thin'
 gem 'execjs'
 gem 'therubyracer'
 gem 'bcrypt'
-gem 'friendly_id'
+gem 'friendly_id', '>= 5.3.0'
 gem 'humanizer'
 # Deprecated gem. release notes - https://github.com/thoughtbot/paperclip/blob/master/NEWS
 gem "paperclip", "~> 5.3"
 
 gem 'socksify'
-gem 'kaminari'
+gem 'kaminari', '>= 1.2.0'
 
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
