@@ -8,6 +8,51 @@
 - Bitcoind (for payment processing)
 - ImageMagick (for image processing)
 
+## Quick Start
+
+For a complete, step-by-step installation guide for Ubuntu VPS, see [INSTALL.md](INSTALL.md).
+
+### Basic Installation Steps
+
+1. **Install Dependencies**
+   ```bash
+   sudo apt update
+   sudo apt install -y ruby3.2 postgresql bitcoind imagemagick tor
+   ```
+
+2. **Clone and Setup**
+   ```bash
+   git clone https://github.com/kimdotonion/trademed.git
+   cd trademed
+   bundle install
+   ```
+
+3. **Configure Database**
+   ```bash
+   # Create database user and database
+   sudo -u postgres createuser -P trademed_user
+   sudo -u postgres createdb -O trademed_user trademed_production
+   ```
+
+4. **Setup Environment**
+   ```bash
+   # Copy and edit .env file with your configuration
+   cp .env.example .env
+   nano .env
+   ```
+
+5. **Initialize Database**
+   ```bash
+   RAILS_ENV=production bundle exec rake db:setup
+   ```
+
+6. **Start Application**
+   ```bash
+   RAILS_ENV=production bundle exec rails server
+   ```
+
+For detailed instructions including TOR hidden service setup, systemd configuration, and production deployment, see the comprehensive [INSTALL.md](INSTALL.md) guide.
+
 ## Overview
 
 TradeMed implements a basic web application for listing products for sale in exchange for bitcoin.

@@ -1,58 +1,809 @@
-# Install
+# TradeMed Installation Guide for Ubuntu VPS
+
+This guide provides step-by-step instructions for deploying TradeMed on an Ubuntu VPS (tested on Ubuntu 20.04 LTS and 22.04 LTS).
+
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [System Requirements](#system-requirements)
+3. [Initial Server Setup](#initial-server-setup)
+4. [Installing Dependencies](#installing-dependencies)
+5. [Installing Ruby and Rails](#installing-ruby-and-rails)
+6. [Installing PostgreSQL](#installing-postgresql)
+7. [Installing Bitcoin Core](#installing-bitcoin-core)
+8. [Setting up TOR (Optional but Recommended)](#setting-up-tor)
+9. [Application Installation](#application-installation)
+10. [Database Configuration](#database-configuration)
+11. [Application Configuration](#application-configuration)
+12. [Starting the Application](#starting-the-application)
+13. [Setting up Systemd Services](#setting-up-systemd-services)
+14. [Setting up Nginx Reverse Proxy](#setting-up-nginx-reverse-proxy)
+15. [Automated Jobs Setup](#automated-jobs-setup)
+
+---
+
+## Overview
 
 The same code is used on both the market and payment server, with configuration options used to distinguish these two roles.
 
-The payment server is optional.
-You may prefer to use another wallet software to generate a bitcoin payment address set then write your own script to upload the addresses to the market server API.
+**Market Server**: Hosts the web interface and manages orders (no private keys stored)
+**Payment Server** (Optional): Generates Bitcoin addresses and processes payments (stores private keys)
 
-Another option is to setup the payment server to generate and upload the initial address set, then it could be powered off for extra security.
-Refund payments could then be processed manually using funds from another wallet, with the payment server only powered on occasionally to access funds to send to other wallets.
-The market administration web interface has a form to manually mark payments as paid. Normally this would be done automatically by the payment server connecting to market API.
+For most single-vendor setups, you can start with just the market server.
 
-A multi-vendor setup is not discussed here since most installs would likely be for a single vendor.
-It is much the same but with some additional settings like ENABLE_VENDOR_REGISTRATION_FORM, COMMISSION. All the code is provided to run a multi-vendor setup.
+---
 
+## Prerequisites
 
-## Requirements
+- Fresh Ubuntu 20.04 or 22.04 VPS
+- At least 2GB RAM (4GB recommended)
+- At least 20GB disk space (more if storing full blockchain)
+- Root or sudo access
+- Basic knowledge of Linux command line
 
-The requirements for both servers are:
+---
 
-* Linux
-* Ruby 3.2+ (tested with Ruby 3.2.3)
-* Rails 6.1.7
-* PostgreSQL
-* docker (optional, but recommended)
-* docker-compose (optional, but recommended)
-* bitcoind >= 0.15 (0.16+ recommended for segwit)
-* git
-* ImageMagick (for image processing)
+## System Requirements
 
-**Note**: The application now requires Ruby 3.2+ and Rails 6.1.7. All dependencies have been updated for compatibility and security.
+### Minimum Requirements
+- **CPU**: 2 cores
+- **RAM**: 2GB (4GB recommended)
+- **Disk**: 20GB (4GB for pruned blockchain + application)
+- **OS**: Ubuntu 20.04 LTS or 22.04 LTS
 
-A full blockchain on disk is not necessary because pruning can be enabled meaning that disk space requirements are only about 3-4 GB.
+### Software Requirements
+- Ruby 3.2+ (tested with Ruby 3.2.3)
+- Rails 6.1.7
+- PostgreSQL 12+
+- Bitcoin Core 0.15+ (0.16+ recommended for segwit)
+- Git
+- ImageMagick (for image processing)
+- TOR (recommended for anonymity)
 
-Earlier versions of bitcoin should work except for when processing payments because the sendmany RPC call has an additional argument that was added in 0.15.
-bitcoind 0.16 is recommended to take advantage of segwit payment addresses.
+**Note**: A full blockchain is not necessary - pruning can be enabled, requiring only ~4GB disk space.
 
-TOR proxies should be available to both servers in the recommended setup but this is not necessary.
-For this example, TOR will be used to host the market HTTP service (hidden service). The payment server will need access to a TOR proxy so it can contact the market server API.
+---
 
-A system to generate a PGP key or an existing PGP key is needed.
-It will be imported into the docker images of the market and payment server applications and when they are built by docker.
-On the market server it will only be used for displaying to users.
-On the payment server the private key will be imported (during image build) so that bitcoin address strings can be clearsigned.
+## Initial Server Setup
 
-In this example bitcoind will not run as a docker instance.
+### 1. Update System Packages
 
+```bash
+sudo apt update
+sudo apt upgrade -y
+```
 
-## Common setup
+### 2. Create Application User
 
-On both servers, install the required software.
+For security, run the application as a dedicated user:
 
-Add two new user accounts to run bitcoind and the rails application. In this example they will be named *btc* and *rails* but any names can be used.
-The objective is to have bitcoind running under a different user account to the rails application for security reasons.
+```bash
+# Create a user for the Rails application
+sudo adduser --disabled-password --gecos "" trademed
 
-Configure .bitcoin/bitcoin.conf and start the daemons on both servers.
+# Create a user for Bitcoin daemon
+sudo adduser --disabled-password --gecos "" bitcoin
+```
+
+### 3. Install Basic Dependencies
+
+```bash
+sudo apt install -y build-essential curl git wget software-properties-common \
+  libssl-dev libreadline-dev zlib1g-dev autoconf bison libyaml-dev \
+  libreadline-dev libncurses5-dev libffi-dev libgdbm-dev
+```
+
+---
+
+## Installing Dependencies
+
+### 1. Install ImageMagick
+
+```bash
+sudo apt install -y imagemagick libmagickwand-dev
+```
+
+### 2. Install Node.js (required for Rails asset compilation)
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+---
+
+## Installing Ruby and Rails
+
+### Option 1: Using rbenv (Recommended)
+
+```bash
+# Install rbenv
+git clone https://github.com/rbenv/rbenv.git ~/.rbenv
+echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bashrc
+echo 'eval "$(rbenv init -)"' >> ~/.bashrc
+source ~/.bashrc
+
+# Install ruby-build
+git clone https://github.com/rbenv/ruby-build.git ~/.rbenv/plugins/ruby-build
+
+# Install Ruby 3.2.3
+rbenv install 3.2.3
+rbenv global 3.2.3
+
+# Verify installation
+ruby -v  # Should show ruby 3.2.3
+
+# Install bundler and rails
+gem install bundler
+gem install rails -v 6.1.7
+```
+
+### Option 2: Using apt (Ubuntu 22.04+)
+
+```bash
+# Note: This may install an older Ruby version
+sudo apt install -y ruby-full
+ruby -v  # Check version, should be 3.0+
+
+gem install bundler rails
+```
+
+---
+
+## Installing PostgreSQL
+
+### 1. Install PostgreSQL
+
+```bash
+sudo apt install -y postgresql postgresql-contrib libpq-dev
+```
+
+### 2. Start PostgreSQL Service
+
+```bash
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+### 3. Create Database User and Database
+
+```bash
+# Switch to postgres user
+sudo -u postgres psql
+
+# In PostgreSQL prompt, create user and database:
+CREATE USER trademed_user WITH PASSWORD 'your_secure_password_here';
+CREATE DATABASE trademed_production OWNER trademed_user;
+GRANT ALL PRIVILEGES ON DATABASE trademed_production TO trademed_user;
+\q
+```
+
+---
+
+## Installing Bitcoin Core
+
+### 1. Download and Install Bitcoin Core
+
+```bash
+# Download Bitcoin Core (adjust version as needed)
+cd /tmp
+wget https://bitcoincore.org/bin/bitcoin-core-25.0/bitcoin-25.0-x86_64-linux-gnu.tar.gz
+
+# Verify checksum (optional but recommended)
+# Download SHA256SUMS from bitcoincore.org and verify
+
+# Extract
+tar -xzf bitcoin-25.0-x86_64-linux-gnu.tar.gz
+
+# Install
+sudo install -m 0755 -o root -g root -t /usr/local/bin bitcoin-25.0/bin/*
+```
+
+### 2. Configure Bitcoin Core
+
+```bash
+# Switch to bitcoin user
+sudo su - bitcoin
+
+# Create bitcoin data directory
+mkdir -p ~/.bitcoin
+
+# Create configuration file
+cat > ~/.bitcoin/bitcoin.conf << 'EOF'
+# Server mode
+server=1
+daemon=1
+
+# RPC settings
+rpcuser=bitcoinrpc
+rpcpassword=CHANGE_THIS_TO_A_STRONG_PASSWORD
+rpcallowip=127.0.0.1
+rpcport=8332
+
+# Enable pruning to save disk space (optional)
+prune=4000
+
+# Network settings
+listen=1
+maxconnections=125
+
+# For production, consider enabling txindex for better performance
+# txindex=1
+EOF
+
+# Exit bitcoin user
+exit
+```
+
+### 3. Start Bitcoin Daemon
+
+```bash
+# As bitcoin user
+sudo -u bitcoin bitcoind -daemon
+
+# Check status
+sudo -u bitcoin bitcoin-cli getblockchaininfo
+```
+
+**Note**: Initial blockchain sync will take several hours to days depending on your connection and if pruning is enabled.
+
+---
+
+## Setting up TOR
+
+TOR is highly recommended for anonymity. This section shows how to set up a TOR hidden service.
+
+### 1. Install TOR
+
+```bash
+sudo apt install -y tor
+```
+
+### 2. Configure TOR Hidden Service
+
+```bash
+# Edit TOR configuration
+sudo nano /etc/tor/torrc
+
+# Add these lines:
+HiddenServiceDir /var/lib/tor/trademed/
+HiddenServicePort 80 127.0.0.1:3000
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+```
+
+### 3. Start TOR Service
+
+```bash
+sudo systemctl restart tor
+sudo systemctl enable tor
+
+# Get your onion address
+sudo cat /var/lib/tor/trademed/hostname
+```
+
+Save this onion address - this is your hidden service URL.
+
+---
+
+## Application Installation
+
+### 1. Clone the Repository
+
+```bash
+# Switch to trademed user
+sudo su - trademed
+
+# Clone repository
+cd ~
+git clone https://github.com/kimdotonion/trademed.git
+cd trademed
+```
+
+### 2. Install Ruby Gems
+
+```bash
+# Install gems
+bundle install --deployment --without development test
+
+# If you encounter any errors, you may need to install additional system libraries
+```
+
+---
+
+## Database Configuration
+
+### 1. Configure Database Connection
+
+```bash
+# Create .env file for environment variables
+cat > ~/trademed/.env << 'EOF'
+# Database configuration
+DATABASE_URL=postgresql://trademed_user:your_secure_password_here@localhost/trademed_production
+
+# Rails secret key (generate with: bundle exec rake secret)
+SECRET_KEY_BASE=GENERATE_A_SECRET_KEY_HERE
+
+# Site configuration
+SITENAME=YourMarketName
+ADMIN_HOSTNAME=your_onion_address.onion
+
+# Bitcoin RPC configuration
+MARKET_BITCOIND_URI=http://bitcoinrpc:CHANGE_THIS_TO_YOUR_RPC_PASSWORD@127.0.0.1:8332
+
+# GPG Key ID (for signing addresses)
+GPG_KEY_ID=YOUR_GPG_KEY_ID
+
+# Admin API key (generate a long random string)
+ADMIN_API_KEY=GENERATE_A_LONG_RANDOM_STRING
+
+# Currency options
+CURRENCIES=USD EUR GBP CAD AUD
+
+# Security settings
+DISPLAYNAME_HASH_SALT=GENERATE_A_RANDOM_SALT
+
+# Blockchain confirmations required
+BLOCKCHAIN_CONFIRMATIONS=3
+
+# Rails environment
+RAILS_ENV=production
+RACK_ENV=production
+EOF
+
+# Generate SECRET_KEY_BASE
+bundle exec rake secret
+
+# Edit .env file and paste the generated secret
+nano .env
+```
+
+### 2. Setup Database
+
+```bash
+# Create database tables
+RAILS_ENV=production bundle exec rake db:setup
+
+# Or if restoring from backup:
+# RAILS_ENV=production bundle exec rake db:create
+# psql -U trademed_user -d trademed_production < backup.sql
+```
+
+---
+
+## Application Configuration
+
+### 1. Generate PGP Key (if you don't have one)
+
+```bash
+# Install GPG if not present
+sudo apt install -y gnupg
+
+# Generate key
+gpg --full-generate-key
+
+# Export public key
+gpg --armor --export YOUR_KEY_ID > ~/trademed/public_key.asc
+
+# Note your KEY_ID and add it to .env file
+```
+
+### 2. Add Logo (Optional)
+
+```bash
+# Copy your logo to assets directory
+cp /path/to/your/logo.png ~/trademed/app/assets/images/logo.png
+
+# Update .env file
+echo "LOGO_FILENAME=logo.png" >> ~/trademed/.env
+```
+
+### 3. Precompile Assets
+
+```bash
+RAILS_ENV=production bundle exec rake assets:precompile
+```
+
+### 4. Create Admin User
+
+```bash
+# Open Rails console
+RAILS_ENV=production bundle exec rails console
+
+# In the console, create admin user:
+AdminUser.create!(
+  username: 'admin',
+  displayname: 'Administrator',
+  password: 'change_this_password',
+  password_confirmation: 'change_this_password',
+  timezone: 'UTC',
+  currency: 'USD'
+)
+
+# Exit console
+exit
+```
+
+---
+
+## Starting the Application
+
+### Manual Start (for testing)
+
+```bash
+# Start the server
+RAILS_ENV=production bundle exec rails server -b 127.0.0.1 -p 3000
+
+# In another terminal, test it:
+curl http://localhost:3000
+```
+
+You should see HTML output. If TOR is configured, you can access via your onion address.
+
+---
+
+## Setting up Systemd Services
+
+### 1. Create Systemd Service File
+
+```bash
+# Exit from trademed user
+exit
+
+# Create service file
+sudo nano /etc/systemd/system/trademed.service
+```
+
+Add the following content:
+
+```ini
+[Unit]
+Description=TradeMed Rails Application
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=trademed
+WorkingDirectory=/home/trademed/trademed
+Environment="RAILS_ENV=production"
+Environment="RACK_ENV=production"
+EnvironmentFile=/home/trademed/trademed/.env
+ExecStart=/home/trademed/.rbenv/shims/bundle exec puma -C config/puma.rb
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### 2. Create Puma Configuration
+
+```bash
+sudo -u trademed nano /home/trademed/trademed/config/puma.rb
+```
+
+Add:
+
+```ruby
+workers Integer(ENV['WEB_CONCURRENCY'] || 2)
+threads_count = Integer(ENV['RAILS_MAX_THREADS'] || 5)
+threads threads_count, threads_count
+
+preload_app!
+
+rackup      DefaultRackup
+port        ENV['PORT']     || 3000
+environment ENV['RACK_ENV'] || 'production'
+
+on_worker_boot do
+  ActiveRecord::Base.establish_connection
+end
+```
+
+### 3. Enable and Start Service
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable trademed
+sudo systemctl start trademed
+
+# Check status
+sudo systemctl status trademed
+
+# View logs
+sudo journalctl -u trademed -f
+```
+
+---
+
+## Setting up Nginx Reverse Proxy
+
+### 1. Install Nginx
+
+```bash
+sudo apt install -y nginx
+```
+
+### 2. Configure Nginx
+
+```bash
+sudo nano /etc/nginx/sites-available/trademed
+```
+
+Add:
+
+```nginx
+upstream trademed {
+  server 127.0.0.1:3000 fail_timeout=0;
+}
+
+server {
+  listen 80;
+  server_name localhost;
+  
+  root /home/trademed/trademed/public;
+  
+  # Security headers
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-XSS-Protection "1; mode=block" always;
+  add_header Content-Security-Policy "default-src 'self'; script-src 'none'; frame-ancestors 'none';" always;
+  
+  location / {
+    proxy_pass http://trademed;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_redirect off;
+  }
+  
+  location ~ ^/(assets|system)/ {
+    gzip_static on;
+    expires max;
+    add_header Cache-Control public;
+  }
+  
+  error_page 500 502 503 504 /500.html;
+  client_max_body_size 4G;
+  keepalive_timeout 10;
+}
+```
+
+### 3. Enable Site and Restart Nginx
+
+```bash
+sudo ln -s /etc/nginx/sites-available/trademed /etc/nginx/sites-enabled/
+sudo nginx -t  # Test configuration
+sudo systemctl restart nginx
+sudo systemctl enable nginx
+```
+
+---
+
+## Automated Jobs Setup
+
+Several background jobs need to run periodically. Set them up with cron.
+
+### 1. Create Job Scripts
+
+```bash
+sudo -u trademed mkdir -p /home/trademed/scripts
+
+# Blockchain checker script
+sudo -u trademed cat > /home/trademed/scripts/update_orders.sh << 'EOF'
+#!/bin/bash
+cd /home/trademed/trademed
+source .env
+flock -n /tmp/update_orders.lock -c "bundle exec rails runner 'UpdateOrdersFromBlockchainJob.perform_now'"
+EOF
+
+# Exchange rate update script
+sudo -u trademed cat > /home/trademed/scripts/update_rates.sh << 'EOF'
+#!/bin/bash
+cd /home/trademed/trademed
+source .env
+bundle exec rails runner 'BtcRatesBitpayJob.perform_now'
+EOF
+
+# Auto-finalize script
+sudo -u trademed cat > /home/trademed/scripts/autofinalize.sh << 'EOF'
+#!/bin/bash
+cd /home/trademed/trademed
+source .env
+bundle exec rails runner 'AutofinalizeJob.perform_now'
+EOF
+
+# Make scripts executable
+sudo chmod +x /home/trademed/scripts/*.sh
+```
+
+### 2. Setup Cron Jobs
+
+```bash
+sudo -u trademed crontab -e
+```
+
+Add these lines:
+
+```cron
+# Update orders from blockchain every 5 minutes
+*/5 * * * * /home/trademed/scripts/update_orders.sh >> /home/trademed/trademed/log/cron.log 2>&1
+
+# Update exchange rates every hour
+0 * * * * /home/trademed/scripts/update_rates.sh >> /home/trademed/trademed/log/cron.log 2>&1
+
+# Auto-finalize orders daily at 2 AM
+0 2 * * * /home/trademed/scripts/autofinalize.sh >> /home/trademed/trademed/log/cron.log 2>&1
+```
+
+---
+
+## Post-Installation Steps
+
+### 1. Create Product Categories
+
+Log in as admin at `http://your_onion_address.onion/admin` and:
+- Navigate to Categories
+- Create product categories (e.g., Electronics, Clothing, etc.)
+
+### 2. Create Locations
+
+- Navigate to Locations
+- Add shipping locations (countries/regions)
+
+### 3. Create Vendor Account
+
+- Register a user account
+- In admin panel, go to Users
+- Find the user and check the "Vendor" option
+- Now you can list products
+
+### 4. Configure Payment Methods
+
+By default, only Bitcoin is available. To add Litecoin:
+
+```bash
+RAILS_ENV=production bundle exec rails runner "PaymentMethod.create(name: 'Litecoin', code: 'LTC')"
+```
+
+---
+
+## Maintenance and Monitoring
+
+### View Application Logs
+
+```bash
+# Application logs
+tail -f /home/trademed/trademed/log/production.log
+
+# System service logs
+sudo journalctl -u trademed -f
+
+# Nginx logs
+sudo tail -f /var/log/nginx/access.log
+sudo tail -f /var/log/nginx/error.log
+```
+
+### Backup Database
+
+```bash
+# Create backup
+sudo -u postgres pg_dump trademed_production > trademed_backup_$(date +%Y%m%d).sql
+
+# Restore from backup
+sudo -u postgres psql trademed_production < trademed_backup_20231110.sql
+```
+
+### Update Application
+
+```bash
+sudo su - trademed
+cd ~/trademed
+git pull origin main
+bundle install
+RAILS_ENV=production bundle exec rake db:migrate
+RAILS_ENV=production bundle exec rake assets:precompile
+exit
+
+sudo systemctl restart trademed
+```
+
+---
+
+## Troubleshooting
+
+### Application Won't Start
+
+```bash
+# Check logs
+sudo journalctl -u trademed -n 100
+
+# Check if port 3000 is in use
+sudo netstat -tlnp | grep 3000
+
+# Check database connectivity
+sudo -u trademed psql -U trademed_user -d trademed_production -h localhost
+```
+
+### Bitcoin RPC Connection Issues
+
+```bash
+# Test RPC connection
+bitcoin-cli -rpcuser=bitcoinrpc -rpcpassword=YOUR_PASSWORD getblockchaininfo
+
+# Check if bitcoind is running
+ps aux | grep bitcoind
+
+# Check bitcoin logs
+tail -f ~/.bitcoin/debug.log
+```
+
+### TOR Hidden Service Not Working
+
+```bash
+# Check TOR status
+sudo systemctl status tor
+
+# View TOR logs
+sudo journalctl -u tor -n 50
+
+# Verify hidden service directory
+sudo ls -la /var/lib/tor/trademed/
+```
+
+---
+
+## Security Recommendations
+
+1. **Firewall**: Configure UFW to only allow necessary ports
+   ```bash
+   sudo ufw allow 22/tcp  # SSH
+   sudo ufw enable
+   ```
+
+2. **SSH Key Authentication**: Disable password authentication
+   ```bash
+   sudo nano /etc/ssh/sshd_config
+   # Set: PasswordAuthentication no
+   sudo systemctl restart sshd
+   ```
+
+3. **Regular Updates**: Keep system updated
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   ```
+
+4. **Monitor Logs**: Regularly check application and system logs
+
+5. **Backup Regularly**: Automate database backups
+
+6. **Separate Payment Server**: For production, use a separate server for payment processing
+
+---
+
+## Additional Resources
+
+- Bitcoin Core documentation: https://bitcoin.org/en/bitcoin-core/
+- TOR Project documentation: https://www.torproject.org/docs/
+- Rails guides: https://guides.rubyonrails.org/
+- PostgreSQL documentation: https://www.postgresql.org/docs/
+
+---
+
+## Support
+
+For questions or issues:
+- Email: tordoctor@tutanota.com
+- Review the application logs first
+- Check Bitcoin and TOR service status
+- Ensure all environment variables are correctly set
+
+---
+
+## Legacy Docker-Based Installation
+
+The previous section below describes the original Docker-based installation method. You can still use this approach if preferred.
 
 ```
 # Allow connections from docker instances. This should be the network range that docker uses.

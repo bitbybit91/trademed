@@ -22,3 +22,8 @@
 /app/assets/images/logo.*
 gpgkeyimport.txt
 .byebug_history
+
+# Environment variables (never commit sensitive data)
+.env
+.env.local
+.env.*.local
