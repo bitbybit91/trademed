@@ -9,7 +9,7 @@ Bundler.require(*Rails.groups)
 module Trademed
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
-    config.load_defaults 5.2
+    config.load_defaults 6.1
     ## Turn this on later once prod working fine and no need to back out.
     Rails.application.config.action_dispatch.use_authenticated_cookie_encryption = false
     # Settings in config/environments/* take precedence over those specified here.

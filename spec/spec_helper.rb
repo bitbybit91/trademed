@@ -14,6 +14,8 @@
 # users commonly want.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
+# Fix for Rails 6.1 compatibility with Ruby 3.2+
+require 'logger' if RUBY_VERSION >= '3.1'
 require 'factory_bot_rails'
 RSpec.configure do |config|
   ## I added this line.

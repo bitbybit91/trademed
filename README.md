@@ -1,5 +1,65 @@
 # TradeMed
 
+## Requirements
+
+- Ruby 3.2+ (tested with Ruby 3.2.3)
+- Rails 6.1.7
+- PostgreSQL
+- Bitcoind (for payment processing)
+- ImageMagick (for image processing)
+
+## Quick Start
+
+For a complete, step-by-step installation guide for Ubuntu VPS, see [INSTALL.md](INSTALL.md).
+
+### Basic Installation Steps
+
+1. **Install Dependencies**
+   ```bash
+   sudo apt update
+   sudo apt install -y ruby3.2 postgresql bitcoind imagemagick tor
+   ```
+
+2. **Clone and Setup**
+   ```bash
+   git clone https://github.com/kimdotonion/trademed.git
+   cd trademed
+   bundle install
+   ```
+
+3. **Configure Database**
+   ```bash
+   # Create database user and database
+   sudo -u postgres createuser -P trademed_user
+   sudo -u postgres createdb -O trademed_user trademed_production
+   ```
+
+4. **Setup Environment**
+   ```bash
+   # Copy and edit .env file with your configuration
+   cp .env.example .env
+   nano .env
+   ```
+
+5. **Initialize Database**
+   ```bash
+   RAILS_ENV=production bundle exec rake db:setup
+   ```
+
+6. **Start Application**
+   ```bash
+   RAILS_ENV=production bundle exec rails server
+   ```
+
+For detailed instructions including TOR hidden service setup, systemd configuration, and production deployment, see the comprehensive [INSTALL.md](INSTALL.md) guide.
+
+## Documentation
+
+- **[INSTALL.md](INSTALL.md)** - Complete installation guide for Ubuntu VPS
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Detailed configuration reference for all settings
+- **[CUSTOMIZATION.md](CUSTOMIZATION.md)** - Guide for customizing appearance and functionality
+- **[UPGRADE_NOTES.md](UPGRADE_NOTES.md)** - Rails 6.1 upgrade documentation
+
 ## Overview
 
 TradeMed implements a basic web application for listing products for sale in exchange for bitcoin.
@@ -107,9 +167,25 @@ The payment server facilitates the bitcoin address generation by interfacing wit
 The address set is stored in the application database on the payment server, then it uploads these to the market web server using the API.
 It can also process refunds or vendor payments by retrieving the customer payment details from the market server and then generating a bitcoin transaction.
 
+## Recent Updates (2025)
+
+**Rails 6.1 Upgrade**: The application has been upgraded from Rails 5.2.2 to Rails 6.1.7 for improved security and Ruby 3.x compatibility.
+
+**Dependency Fixes**: 
+- Fixed mimemagic dependency issue by migrating from the deprecated `paperclip` gem to the maintained `kt-paperclip` fork
+- All dependencies are now up-to-date and working with Ruby 3.2+
+
+**Compatibility**: The application now works with Ruby 3.2+ and has most dependency security issues resolved.
+
+**Known Security Advisories**: Rails 6.1.7.10 has some known CVEs that require upgrading to Rails 7.x+ to fix. However, Rails 7.x would require significant code changes. The current version (6.1.7.10) is more secure than the original 5.2.2 version. For production use, please review the security advisories and consider:
+- Running the application behind a WAF (Web Application Firewall)
+- Following security best practices for TOR hidden services
+- Keeping all system packages up-to-date
+- Considering an upgrade to Rails 7.x+ for the latest security patches
+
 ## Work to do
 
-Paperclip gem is deprecated and image support needs to [migrate to ActiveStorage](https://robots.thoughtbot.com/closing-the-trombone).
+~~Paperclip gem is deprecated and image support needs to migrate to ActiveStorage~~ - **RESOLVED**: Now using kt-paperclip, a maintained fork that fixes compatibility issues.
 
 Lightning payments.
 
