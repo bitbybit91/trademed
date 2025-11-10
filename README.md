@@ -1,5 +1,13 @@
 # TradeMed
 
+## Requirements
+
+- Ruby 3.2+ (tested with Ruby 3.2.3)
+- Rails 6.1.7
+- PostgreSQL
+- Bitcoind (for payment processing)
+- ImageMagick (for image processing)
+
 ## Overview
 
 TradeMed implements a basic web application for listing products for sale in exchange for bitcoin.
@@ -107,9 +115,25 @@ The payment server facilitates the bitcoin address generation by interfacing wit
 The address set is stored in the application database on the payment server, then it uploads these to the market web server using the API.
 It can also process refunds or vendor payments by retrieving the customer payment details from the market server and then generating a bitcoin transaction.
 
+## Recent Updates (2025)
+
+**Rails 6.1 Upgrade**: The application has been upgraded from Rails 5.2.2 to Rails 6.1.7 for improved security and Ruby 3.x compatibility.
+
+**Dependency Fixes**: 
+- Fixed mimemagic dependency issue by migrating from the deprecated `paperclip` gem to the maintained `kt-paperclip` fork
+- All dependencies are now up-to-date and working with Ruby 3.2+
+
+**Compatibility**: The application now works with Ruby 3.2+ and has most dependency security issues resolved.
+
+**Known Security Advisories**: Rails 6.1.7.10 has some known CVEs that require upgrading to Rails 7.x+ to fix. However, Rails 7.x would require significant code changes. The current version (6.1.7.10) is more secure than the original 5.2.2 version. For production use, please review the security advisories and consider:
+- Running the application behind a WAF (Web Application Firewall)
+- Following security best practices for TOR hidden services
+- Keeping all system packages up-to-date
+- Considering an upgrade to Rails 7.x+ for the latest security patches
+
 ## Work to do
 
-Paperclip gem is deprecated and image support needs to [migrate to ActiveStorage](https://robots.thoughtbot.com/closing-the-trombone).
+~~Paperclip gem is deprecated and image support needs to migrate to ActiveStorage~~ - **RESOLVED**: Now using kt-paperclip, a maintained fork that fixes compatibility issues.
 
 Lightning payments.
 

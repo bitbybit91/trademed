@@ -18,10 +18,16 @@ It is much the same but with some additional settings like ENABLE_VENDOR_REGISTR
 The requirements for both servers are:
 
 * Linux
-* docker
-* docker-compose
-* bitcoind >= 0.15
+* Ruby 3.2+ (tested with Ruby 3.2.3)
+* Rails 6.1.7
+* PostgreSQL
+* docker (optional, but recommended)
+* docker-compose (optional, but recommended)
+* bitcoind >= 0.15 (0.16+ recommended for segwit)
 * git
+* ImageMagick (for image processing)
+
+**Note**: The application now requires Ruby 3.2+ and Rails 6.1.7. All dependencies have been updated for compatibility and security.
 
 A full blockchain on disk is not necessary because pruning can be enabled meaning that disk space requirements are only about 3-4 GB.
 
