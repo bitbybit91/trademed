@@ -53,6 +53,13 @@ For a complete, step-by-step installation guide for Ubuntu VPS, see [INSTALL.md]
 
 For detailed instructions including TOR hidden service setup, systemd configuration, and production deployment, see the comprehensive [INSTALL.md](INSTALL.md) guide.
 
+## Documentation
+
+- **[INSTALL.md](INSTALL.md)** - Complete installation guide for Ubuntu VPS
+- **[CONFIGURATION.md](CONFIGURATION.md)** - Detailed configuration reference for all settings
+- **[CUSTOMIZATION.md](CUSTOMIZATION.md)** - Guide for customizing appearance and functionality
+- **[UPGRADE_NOTES.md](UPGRADE_NOTES.md)** - Rails 6.1 upgrade documentation
+
 ## Overview
 
 TradeMed implements a basic web application for listing products for sale in exchange for bitcoin.
